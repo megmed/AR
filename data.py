@@ -11,51 +11,76 @@ def seconds_between(d1, d2):
     return abs((d2 - d1).seconds)
 
 
-with open('data/actions_1_von_4.csv', 'r', newline='') as csvfile:
-    dataReader = csv.reader(csvfile, delimiter='\t', quotechar='"')
-    headers = next(dataReader, None)  # skip the headers
-    print("""\
-    Header
-    %s
-    """ % (headers))
-    # sort data by userid and timestamp
-    sortedlist = sorted(dataReader, key=lambda row: (row[0], row[1]), reverse=False)
-    allActionsCount = 0
-    sessionActionsCount = 1
-    sessionActions = []
-    sessionDuration = 0
-    sessionDurationMaxDistance = 300  # in seconds
-    previousRow = None
-    previousUserId = None
+def calculateSessions():
+    with open('data/actions_1_von_4.csv', 'r', newline='') as csvfile:
+        dataReader = csv.reader(csvfile, delimiter='\t', quotechar='"')
+        headers = next(dataReader, None)  # skip the headers
+        print("""\
+        Header
+        %s
+        """ % (headers))
+        # sort data by userid and timestamp
+        sortedlist = sorted(dataReader, key=lambda row: (row[0], row[1]), reverse=False)
+        allActionsCount = 0
+        actionsPerMinute = 0
+        sessionActionsCount = 0
+        sessionActions = []
+        sessionDuration = 0
+        sessionDurationMaxDistance = 300  # in seconds
+        previousRow = None
+        previousUserId = None
 
-    # find periods of actions per user and calculate the usage duration and amount of actions
-    for row in sortedlist:
-        userId = row[0]
-        actionLabel = row[3]
-        if sessionActionsCount > 1:
-            actionsSecondsBetween = seconds_between(previousRow[1], row[1])
+        # find periods of actions per user and calculate the usage duration and amount of actions
+        for row in sortedlist:
 
-            if userId != previousUserId or actionsSecondsBetween > sessionDurationMaxDistance:
-                # user id changed or max distance reached
-                print("""\
-                ********** %s : %s : %s : %s ********
-                """ % (previousUserId, sessionDuration, (sessionActionsCount-1), sessionActions))
+            sessionActionsCount += 1
+            allActionsCount += 1
 
-                # reset numbers and actions list
-                sessionDuration = 0
-                sessionActionsCount = 0
-                sessionActions = []
+            if sessionActionsCount > 1:
+                print(', '.join(previousRow))
 
-            else:
-                # add time difference between those two actions
-                sessionDuration += actionsSecondsBetween
+            userId = row[0]
+            actionLabel = row[3]
+            if sessionActionsCount > 1:
+                actionsSecondsBetween = seconds_between(previousRow[1], row[1])
+                print(actionsSecondsBetween)
+                if userId != previousUserId or actionsSecondsBetween > sessionDurationMaxDistance:
+                    if sessionActionsCount == 2:
+                        sessionActions.append(actionLabel)
 
-        # add current action to the list of actions
-        sessionActions.append(actionLabel)
-        if allActionsCount > 300:
-            break
-        previousUserId = row[0]
-        previousRow = row
-        sessionActionsCount += 1
-        allActionsCount += 1
-        print(', '.join(row))
+                    if (sessionDuration > 0):
+                        actionsPerMinute = ((sessionActionsCount - 1) / (sessionDuration / 60))
+                    # user id changed or max distance reached
+                    print("""\
+
+********** New Session ********
+UserId: %s
+Duration: %s
+ActionsCount: %s
+Actions/Minute: %s
+Actions: %s
+*******************************
+
+                    """ % (
+                    previousUserId, sessionDuration, (sessionActionsCount - 1), actionsPerMinute, sessionActions))
+
+                    # reset numbers and actions list
+                    sessionDuration = 0
+                    actionsPerMinute = 0
+                    sessionActionsCount = 0
+                    sessionActions = []
+
+                else:
+                    # add time difference between those two actions
+                    sessionDuration += actionsSecondsBetween
+                    # add current action to the list of actions
+                    sessionActions.append(actionLabel)
+
+            if allActionsCount > 300:
+                print(', '.join(row))
+                break
+            previousUserId = row[0]
+            previousRow = row
+
+
+calculateSessions()
