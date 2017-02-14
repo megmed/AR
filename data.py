@@ -19,9 +19,9 @@ with open('data/actions_1_von_4.csv', 'r', newline='') as csvfile:
     %s
     """ % (headers))
     # sort data by userid and timestamp
-    sortedlist = sorted(dataReader, key=lambda row: (row[0], row[1]), reverse=True)
+    sortedlist = sorted(dataReader, key=lambda row: (row[0], row[1]), reverse=False)
     allActionsCount = 0
-    sessionActionsCount = 0
+    sessionActionsCount = 1
     sessionActions = []
     sessionDuration = 0
     sessionDurationMaxDistance = 300  # in seconds
@@ -30,13 +30,16 @@ with open('data/actions_1_von_4.csv', 'r', newline='') as csvfile:
 
     # find periods of actions per user and calculate the usage duration and amount of actions
     for row in sortedlist:
-        if sessionActionsCount > 0:
-            actionsSecondsBetween = seconds_between(row[1], previousRow[1])
-            if row[0] != previousUserId or actionsSecondsBetween > sessionDurationMaxDistance:
+        userId = row[0]
+        actionLabel = row[3]
+        if sessionActionsCount > 1:
+            actionsSecondsBetween = seconds_between(previousRow[1], row[1])
+
+            if userId != previousUserId or actionsSecondsBetween > sessionDurationMaxDistance:
                 # user id changed or max distance reached
                 print("""\
                 ********** %s : %s : %s : %s ********
-                """ % (previousUserId, sessionDuration, sessionActionsCount, sessionActions))
+                """ % (previousUserId, sessionDuration, (sessionActionsCount-1), sessionActions))
 
                 # reset numbers and actions list
                 sessionDuration = 0
@@ -46,8 +49,9 @@ with open('data/actions_1_von_4.csv', 'r', newline='') as csvfile:
             else:
                 # add time difference between those two actions
                 sessionDuration += actionsSecondsBetween
-                # add current action to the list of actions
-                sessionActions.append(row[3])
+
+        # add current action to the list of actions
+        sessionActions.append(actionLabel)
         if allActionsCount > 300:
             break
         previousUserId = row[0]
